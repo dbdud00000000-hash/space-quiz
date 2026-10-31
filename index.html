@@ -452,6 +452,28 @@
     const resultText = document.getElementById("resultText");
     const restartBtn = document.getElementById("restartBtn");
 
+    function shuffle(items) {
+      const result = items.slice();
+      for (let i = result.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [result[i], result[j]] = [result[j], result[i]];
+      }
+      return result;
+    }
+
+    // Returns a shuffled copy; quizData itself is never mutated.
+    function buildQuiz(data) {
+      return shuffle(data).map((item) => {
+        const order = shuffle(item.options.map((_, idx) => idx));
+        return {
+          question: item.question,
+          options: order.map((idx) => item.options[idx]),
+          answer: order.indexOf(item.answer)
+        };
+      });
+    }
+
+    let questions = buildQuiz(quizData);
     let current = 0;
     let score = 0;
     let answered = false;
@@ -466,7 +488,7 @@
 
     function showQuestion(moveFocus = true) {
       answered = false;
-      const item = quizData[current];
+      const item = questions[current];
       feedbackEl.className = "feedback";
       feedbackEl.textContent = "";
       nextBtn.classList.add("hidden");
@@ -492,7 +514,7 @@
       if (answered) return;
       answered = true;
 
-      const item = quizData[current];
+      const item = questions[current];
       const allButtons = Array.from(answersEl.querySelectorAll(".answer-btn"));
       allButtons.forEach((btn) => (btn.disabled = true));
 
@@ -551,6 +573,7 @@
     }
 
     function restartQuiz() {
+      questions = buildQuiz(quizData);
       current = 0;
       score = 0;
       answered = false;
