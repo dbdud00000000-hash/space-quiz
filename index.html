@@ -313,6 +313,26 @@
       font-weight: 600;
     }
 
+    .record-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin: 0 0 10px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      font-weight: 800;
+      color: white;
+      background: linear-gradient(120deg, var(--accent-a), var(--accent-b));
+      box-shadow: 0 0 14px var(--hud-glow);
+      animation: popIn 380ms ease;
+    }
+
+    .best-score-text {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
     .hidden {
       display: none !important;
     }
@@ -321,7 +341,8 @@
       h1::before,
       .quiz-body.correct-pulse,
       .quiz-body.wrong-shake,
-      .result.show {
+      .result.show,
+      .record-badge {
         animation: none;
       }
     }
@@ -377,8 +398,10 @@
 
       <section class="result" id="result">
         <div class="result-emoji" id="resultEmoji"></div>
-        <h2 class="result-title" id="resultTitle" tabindex="-1" aria-describedby="resultText">퀴즈 완료!</h2>
+        <p class="record-badge hidden" id="newRecordBadge">🎉 신기록!</p>
+        <h2 class="result-title" id="resultTitle" tabindex="-1" aria-describedby="newRecordBadge resultText bestScoreText">퀴즈 완료!</h2>
         <p class="result-text" id="resultText"></p>
+        <p class="best-score-text" id="bestScoreText"></p>
         <button class="restart-btn" id="restartBtn" type="button">다시 도전하기</button>
       </section>
     </section>
@@ -451,6 +474,30 @@
     const resultEmoji = document.getElementById("resultEmoji");
     const resultText = document.getElementById("resultText");
     const restartBtn = document.getElementById("restartBtn");
+    const newRecordBadge = document.getElementById("newRecordBadge");
+    const bestScoreText = document.getElementById("bestScoreText");
+
+    const BEST_SCORE_KEY = "spaceQuiz.bestScore";
+
+    // Storage may be unavailable (e.g. private mode); treat failures as "no record".
+    function loadBestScore() {
+      try {
+        const raw = localStorage.getItem(BEST_SCORE_KEY);
+        if (raw === null || !/^\d+$/.test(raw)) return null;
+        const value = Number(raw);
+        return value <= quizData.length ? value : null;
+      } catch {
+        return null;
+      }
+    }
+
+    function saveBestScore(value) {
+      try {
+        localStorage.setItem(BEST_SCORE_KEY, String(value));
+      } catch {
+        // Ignore storage errors so the quiz keeps working.
+      }
+    }
 
     function shuffle(items) {
       const result = items.slice();
@@ -568,6 +615,14 @@
 
       resultEmoji.textContent = emoji;
       resultText.textContent = `최종 점수: ${score} / ${quizData.length} (${percent}%) · ${message}`;
+
+      const previousBest = loadBestScore();
+      const isNewRecord = previousBest === null || score > previousBest;
+      const bestScore = isNewRecord ? score : previousBest;
+      if (isNewRecord) saveBestScore(score);
+      bestScoreText.textContent = `최고 기록: ${bestScore} / ${quizData.length}`;
+      newRecordBadge.classList.toggle("hidden", !isNewRecord);
+
       resultEl.classList.add("show");
       document.getElementById("resultTitle").focus();
     }
@@ -578,6 +633,7 @@
       score = 0;
       answered = false;
       resultEl.classList.remove("show");
+      newRecordBadge.classList.add("hidden");
       questionText.classList.remove("hidden");
       answersEl.classList.remove("hidden");
       feedbackEl.className = "feedback";
